@@ -6,5 +6,6 @@ class Cache:
         self.db = db_instance
         self.elements = []
 
-    def load(self, element_value: str):
-        self.elements.append(Node(element_value, parent=None))
+    def load(self, index: str):
+        node = self.db.nodes[index]
+        self.elements.append(node)

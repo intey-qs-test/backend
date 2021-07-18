@@ -1,25 +1,46 @@
-from dataclasses import dataclass
+import typing as t
+
+from dataclasses import dataclass, field
+from uuid import uuid4
+
+Index = str
+
+
+def _new_index() -> Index:
+    return str(uuid4())
 
 
 @dataclass(frozen=True)
 class Node:
     value: str
     parent: "Node"
-
-
-Position = Node
+    index: Index = field(default_factory=_new_index)
 
 
 class MemoryDatabase:
     def __init__(self):
-        self.tree = Node(value="root", parent=None)
+        root = Node(value="root", parent=None)
+        self.root_index = root.index
+        self.nodes = {self.root_index: root}
 
-    def insert(self, value: str, position: Position):
-        self.data[position] = value
+    def insert(self, value: str, index: Index) -> t.Optional[Index]:
+        if self.nodes.get(index) is None:
+            return
 
-    def delete(self, value: str, position: Position):
-        if self.data.get(position):
-            self.data.pop(position)
+        new_node = Node(value=value, parent=index)
+        self.nodes[new_node.index] = new_node
+        return new_node.index
 
-    def alter(self, new_value: str, position: Position):
-        self.data[position] = new_value
+    def delete(self, value: str, index: Index) -> bool:
+        if not self.nodes.get(index):
+            return False
+
+        self.data.pop(index)
+        return True
+
+    def alter(self, new_value: str, index: Index) -> bool:
+        if not self.data.get(index):
+            return False
+
+        self.nodes[index].value = new_value
+        return True
