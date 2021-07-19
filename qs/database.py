@@ -10,7 +10,7 @@ def _new_index() -> Index:
     return str(uuid4())
 
 
-@dataclass(frozen=True)
+@dataclass
 class Node:
     value: str
     parent: "Node"
