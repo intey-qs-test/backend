@@ -83,6 +83,10 @@ class Cache:
         self.unsync_changes = []
 
     def load(self, index: Index) -> CacheNode:
+        # already loaded
+        if self.find(index):
+            return
+
         node = self.db.get_node(index)
 
         # NOTE: for simplify logic just assert, because user has no ability
