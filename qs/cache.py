@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from qs.database import Node, Index
 from dataclasses import dataclass, field
@@ -6,7 +7,7 @@ import typing as t
 
 class CacheError(Exception):
     def __init__(self, message):
-        Exception.__init__(self)
+        super().__init__(message)
         self.message = message
 
 
@@ -27,23 +28,34 @@ class CacheNode(Node):
 
 
 @dataclass
-class IChangeRecord:
+class IChangeRecord(ABC):
     index: Index
+
+    @abstractmethod
+    def apply(self, db):
+        pass
 
 
 @dataclass
 class DeleteRecord(IChangeRecord):
-    pass
+    def apply(self, db):
+        db.delete(index=self.index)
 
 
 @dataclass
 class InsertRecord(IChangeRecord):
     value: str
 
+    def apply(self, db):
+        db.insert(value=self.value, parent=self.index)
+
 
 @dataclass
 class UpdateRecord(IChangeRecord):
     value: str
+
+    def apply(self, db):
+        db.alter(new_value=self.value, index=self.index)
 
 
 class Cache:
@@ -70,7 +82,8 @@ class Cache:
 
         # NOTE: for simplify logic just assert, because user has no ability
         # select unexist index. In real case, we should return None or raise
-        assert node is not None, f"Unexists node in database: {index}"
+        if node is None:
+            raise CacheError(f"load: Unexists node in database: {index}")
 
         cache_node = CacheNode.make_from_node(node)
         self._rebuild_tree(cache_node)
@@ -81,7 +94,7 @@ class Cache:
         parent_node = self.find(parent)
 
         if not parent_node:
-            raise KeyError(f"has no node with index {parent}")
+            raise CacheError(f"make_node: not loaded {parent}")
 
         node = CacheNode(value=value, parent=parent)
         parent_node.children[node.index] = node
@@ -91,28 +104,19 @@ class Cache:
 
     def alter(self, node_index: Index, new_value: str):
 
-        altered = False
         found_node = self.find(node_index)
         if found_node:
             found_node.value = new_value
             record = UpdateRecord(index=node_index, value=new_value)
             self.unsync_changes.append(record)
+        else:
+            raise CacheError(f"alter: not loaded {node_index}")
 
-    def apply(self) -> tuple[bool, t.Optional[str]]:
-        # TODO: sync changes with database
+    def apply(self):
         for change in self.unsync_changes:
-            if isinstance(change, InsertRecord):
-                self.db.insert(value=change.value, parent=change.index)
-            elif isinstance(change, UpdateRecord):
-                self.db.alter(new_value=change.value, index=change.index)
-            elif isinstance(change, DeleteRecord):
-                if not self.db.delete(index=change.index):
-                    raise Exception
-            else:
-                return False, f"can't apply unknown change {type(change)}"
+            change.apply(self.db)
 
         self.unsync_changes = []
-        return True, None
 
     def delete(self, node_index: Index):
         node = self.find(node_index)
@@ -148,10 +152,13 @@ class Cache:
             # No links. just put in element
             self.elements.append(loaded_node)
 
-    def find(self, node_index: Index) -> CacheNode:
+    def find(self, node_index: Index) -> t.Optional[CacheNode]:
         for element in self.elements:
             if element.index == node_index:
                 return element
             found_node_in_children = element.find(node_index)
             if found_node_in_children:
                 return found_node_in_children
+
+    def __repr__(self):
+        return f"<Cache: {self.elements=}>"

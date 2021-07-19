@@ -50,14 +50,12 @@ class MemoryDatabase:
 
         return new_node
 
-    def delete(self, index: Index) -> bool:
+    def delete(self, index: Index):
         if not self.indexes.get(index):
-            return False
+            return
 
         current = self.indexes[index]
         self.__archive(current)
-        # TODO: archive childs
-        return True
 
     def __archive(self, index_item: IndexItem):
         index_item.node.archive = True
@@ -65,7 +63,7 @@ class MemoryDatabase:
             self.__archive(child)
 
     def alter(self, new_value: str, index: Index) -> bool:
-        if not self.data.get(index):
+        if not self.indexes.get(index):
             return False
 
         self.indexes[index].node.value = new_value
