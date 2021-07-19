@@ -1,5 +1,4 @@
-from abc import ABC, abstractmethod
-from enum import Enum
+from abc import ABCMeta, abstractmethod
 from qs.database import Node, Index
 from dataclasses import dataclass, field
 import typing as t
@@ -13,22 +12,27 @@ class CacheError(Exception):
 
 @dataclass
 class CacheNode(Node):
-    children: dict[Index, "Node"] = field(default_factory=dict)
+    """
+    only_in_cache - node is present only in the cache
+    """
 
-    def find(self, index: Index) -> "CacheNode":
+    children: dict[Index, "CacheNode"] = field(default_factory=dict)
+    only_in_cache: bool = False
 
+    def find(self, index: Index) -> t.Optional["CacheNode"]:
         for child_index, child in self.children.items():
             if child_index == index:
                 return child
             return child.find(index)
+        return None
 
     @classmethod
     def make_from_node(cls, node: "Node") -> "CacheNode":
         return CacheNode(value=node.value, parent=node.parent, index=node.index)
 
 
-@dataclass
-class IChangeRecord(ABC):
+@dataclass  # type: ignore
+class IChangeRecord(metaclass=ABCMeta):
     index: Index
 
     @abstractmethod
@@ -45,9 +49,10 @@ class DeleteRecord(IChangeRecord):
 @dataclass
 class InsertRecord(IChangeRecord):
     value: str
+    parent: Index
 
     def apply(self, db):
-        db.insert(value=self.value, parent=self.index)
+        db.insert(value=self.value, parent=self.parent, new_node_index=self.index)
 
 
 @dataclass
@@ -65,10 +70,10 @@ class Cache:
     # How tree maked
 
     Firstly, we checks other elements, that they
-    contained in loaded element, because each node from
+    contained in a loaded element, because each node from
     database has only parent link, no children
 
-    In second step, we checks that loaded element has parent in
+    In second step, we checks that the loaded element has parent in
     already loaded elements.
     """
 
@@ -90,16 +95,20 @@ class Cache:
 
         return cache_node
 
-    def make_node(self, value: str, parent: Index):
+    def insert(self, value: str, parent: Index) -> CacheNode:
         parent_node = self.find(parent)
 
         if not parent_node:
-            raise CacheError(f"make_node: not loaded {parent}")
+            raise CacheError(f"insert: not loaded {parent}")
 
-        node = CacheNode(value=value, parent=parent)
+        # NOTE: newly craete cache node has self generated index that
+        # will didn't match with db index when apply this changes
+        node = CacheNode(value=value, parent=parent, only_in_cache=True)
         parent_node.children[node.index] = node
 
-        self.unsync_changes.append(InsertRecord(index=node.index, value=value))
+        self.unsync_changes.append(
+            InsertRecord(index=node.index, value=value, parent=node.parent)
+        )
         return node
 
     def alter(self, node_index: Index, new_value: str):
@@ -128,7 +137,7 @@ class Cache:
 
     def __archive(self, node: CacheNode):
         node.archive = True
-        for child in node.children:
+        for child in node.children.values():
             self.__archive(child)
 
     def _rebuild_tree(self, loaded_node: CacheNode):
@@ -159,6 +168,7 @@ class Cache:
             found_node_in_children = element.find(node_index)
             if found_node_in_children:
                 return found_node_in_children
+        return None
 
     def __repr__(self):
         return f"<Cache: {self.elements=}>"
