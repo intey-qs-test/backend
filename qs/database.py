@@ -15,32 +15,58 @@ class Node:
     value: str
     parent: "Node"
     index: Index = field(default_factory=_new_index)
+    archive: bool = False
+
+
+@dataclass
+class IndexItem:
+    node: Node
+    children: dict[str, "IndexItem"] = field(default_factory=dict)
 
 
 class MemoryDatabase:
     def __init__(self):
         root = Node(value="root", parent=None)
         self.root_index = root.index
-        self.nodes = {self.root_index: root}
+        # save nodes in tree. When we need node itself - get "node" key.
+        # use children for archiving and search
+        self.indexes = {self.root_index: IndexItem(node=root)}
 
-    def insert(self, value: str, index: Index) -> t.Optional[Index]:
-        if self.nodes.get(index) is None:
+    def get_node(self, index: Index):
+        result = self.indexes.get(index)
+        if result is not None:
+            return result.node
+
+    def insert(self, value: str, parent: Index) -> t.Optional[Index]:
+        if self.indexes.get(parent) is None:
             return
 
-        new_node = Node(value=value, parent=index)
-        self.nodes[new_node.index] = new_node
-        return new_node.index
+        new_node = Node(value=value, parent=parent)
+        # make entry for search
+        new_index_item = IndexItem(node=new_node)
+        self.indexes[new_node.index] = new_index_item
+        # make tree
+        self.indexes[parent].children[new_node.index] = new_index_item
 
-    def delete(self, value: str, index: Index) -> bool:
-        if not self.nodes.get(index):
+        return new_node
+
+    def delete(self, index: Index) -> bool:
+        if not self.indexes.get(index):
             return False
 
-        self.data.pop(index)
+        current = self.indexes[index]
+        self.__archive(current)
+        # TODO: archive childs
         return True
+
+    def __archive(self, index_item: IndexItem):
+        index_item.node.archive = True
+        for child in index_item.children.values():
+            self.__archive(child)
 
     def alter(self, new_value: str, index: Index) -> bool:
         if not self.data.get(index):
             return False
 
-        self.nodes[index].value = new_value
+        self.indexes[index].node.value = new_value
         return True
