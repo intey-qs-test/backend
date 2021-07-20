@@ -1,5 +1,4 @@
-from qs.cache import CacheNode
-from qs.database import IndexItem
+from qs.database.types import IndexItem
 
 
 def show_index(db_index: IndexItem, indent=0):

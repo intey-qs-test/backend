@@ -1,5 +1,5 @@
-from qs.cache import CacheNode, Cache
-from qs.database import MemoryDatabase
+from qs.cache.cache import Cache
+from qs.database.database import MemoryDatabase
 from qs.utils import show_index
 
 

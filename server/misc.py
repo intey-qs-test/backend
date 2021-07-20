@@ -1,7 +1,7 @@
-from dataclasses import dataclass
-from fastapi import Depends
-from qs.database import IndexItem, MemoryDatabase, Index
-from qs.cache import Cache, CacheNode
+from qs.database.database import MemoryDatabase
+from qs.database.types import Index, IndexItem
+from qs.cache.cache import Cache
+from qs.cache.types import CacheNode
 import typing as t
 from pydantic import BaseModel
 

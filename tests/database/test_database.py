@@ -1,4 +1,4 @@
-from qs.database import MemoryDatabase
+from qs.database.database import MemoryDatabase
 
 
 def test_insert_node_in_root(default_infra):

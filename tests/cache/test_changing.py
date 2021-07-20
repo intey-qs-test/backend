@@ -1,4 +1,4 @@
-from qs.cache import CacheError
+from qs.cache.errors import CacheError
 import pytest
 
 

@@ -1,9 +1,10 @@
 import typing as t
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from qs.database import MemoryDatabase, Index
-from qs.cache import Cache, CacheError
+from qs.database.types import Index
+from qs.cache.cache import Cache
+from qs.cache.errors import CacheError
 from server.misc import (
     present_cache,
     present_db,

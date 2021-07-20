@@ -1,39 +1,7 @@
 import typing as t
 
-from dataclasses import dataclass, field
-from uuid import uuid4
-
-Index = str
-
-
-def _new_index() -> Index:
-    return str(uuid4())
-
-
-@dataclass
-class Node:
-    value: str
-    parent: str
-    index: Index = field(default_factory=_new_index)
-    archive: bool = False
-
-
-@dataclass
-class IndexItem:
-    node: Node
-    children: dict[str, "IndexItem"] = field(default_factory=dict)
-
-    @property
-    def value(self):
-        return self.node.value
-
-    @property
-    def index(self):
-        return self.node.index
-
-    @property
-    def archive(self):
-        return self.node.archive
+from qs.database.types import Index, Node, IndexItem
+from qs.database.utils import new_index
 
 
 class MemoryDatabase:
@@ -58,7 +26,7 @@ class MemoryDatabase:
 
         # client can set node index itself. If not - we make it
         if new_node_index is None:
-            new_node_index = _new_index()
+            new_node_index = new_index()
         new_node = Node(value=value, parent=parent, index=new_node_index)
         # make entry for search
         new_index_item = IndexItem(node=new_node)

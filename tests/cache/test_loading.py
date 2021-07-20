@@ -1,5 +1,5 @@
-from qs.database import MemoryDatabase
-from qs.cache import Cache
+from qs.database.database import MemoryDatabase
+from qs.cache.cache import Cache
 
 
 def test_load_root_element(default_infra):

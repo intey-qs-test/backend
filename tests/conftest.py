@@ -1,6 +1,6 @@
 import pytest
-from qs.database import MemoryDatabase
-from qs.cache import Cache
+from qs.database.database import MemoryDatabase
+from qs.cache.cache import Cache
 
 
 @pytest.fixture

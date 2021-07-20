@@ -1,6 +1,5 @@
-from server.api import cache_exception_handler
 import pytest
-from qs.cache import CacheError
+from qs.cache.errors import CacheError
 
 
 def test_create_cant_create_node_on_unloaded(default_infra):
