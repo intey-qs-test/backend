@@ -160,7 +160,7 @@ class Cache:
                 loaded_node.children[element.index] = element
                 self.elements.remove(element)
 
-        found_parent = self.find(loaded_node.parent)
+        found_parent = self.find(loaded_node.parent, include_archived=True)
         if found_parent is not None:
             # Second step. link with parent, if any
             found_parent.children[loaded_node.index] = loaded_node
@@ -168,11 +168,11 @@ class Cache:
             # No links. just put in element
             self.elements.append(loaded_node)
 
-    def find(self, node_index: Index) -> t.Optional[CacheNode]:
+    def find(self, node_index: Index, include_archived=False) -> t.Optional[CacheNode]:
         for element in self.elements:
             if element.index == node_index:
                 # exclude archive from search
-                if not element.archive:
+                if include_archived or not element.archive:
                     return element
             found_node_in_children = element.find(node_index)
             if found_node_in_children:
