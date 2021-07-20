@@ -33,10 +33,4 @@ DB.
 
 ## Don't mislead user
 
-Temporaly craeted items in cache should be visible as temporal
-
-# TODO
-
-- [ ] document code
-- [ ] shrink change records (insert -> alter -> delete == nothing
-- [ ] reset to initial state
+Temporally created items in cache should be visible as temporal

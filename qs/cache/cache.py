@@ -42,7 +42,7 @@ class Cache:
             raise CacheError(f"load: Unexists node in database: {index}")
 
         cache_node = CacheNode.make_from_node(node)
-        self._rebuild_tree(cache_node)
+        self.__insert_node_with_rebalance(cache_node)
 
         return cache_node
 
@@ -66,6 +66,9 @@ class Cache:
         return node
 
     def alter(self, node_index: Index, new_value: str):
+        """
+        Set new_value to node with given index
+        """
         found_node = self.find(node_index)
         if found_node:
             found_node.value = new_value
@@ -75,6 +78,9 @@ class Cache:
             raise CacheError(f"alter: not loaded or unexist {node_index}")
 
     def apply(self):
+        """
+        apply all changes to database
+        """
         for change in self.unsync_changes:
             change.apply(self.db)
         for change in self.unsync_changes:
@@ -85,6 +91,9 @@ class Cache:
         self.unsync_changes = []
 
     def delete(self, node_index: Index):
+        """
+        remove node from cache with given index
+        """
         node = self.find(node_index)
         if node:
             self.__archive(node)
@@ -92,38 +101,14 @@ class Cache:
             # but for current realization of database - it's not needed
             self.unsync_changes.append(DeleteRecord(index=node_index))
 
-    def __archive(self, node: CacheNode):
-        node.archive = True
-        for child in node.children.values():
-            self.__archive(child)
-
-    def _rebuild_tree(self, loaded_node: CacheNode):
-        # when cache is empty, we can't make any links
-        if not self.elements:
-            self.elements.append(loaded_node)
-            return
-
-        # First step - search elements that is child for
-        # loaded_node and move then under this node
-        parent_node = self.find(loaded_node.parent, include_archived=True)
-        if parent_node:
-            parent_node.children[loaded_node.index] = loaded_node
-            if parent_node.archive:
-                self.__archive(parent_node)
-        # No links. just put in element
-        else:
-            self.elements.append(loaded_node)
-
-        # move childs under new parent if someone
-        for element in self.elements:
-            if element.parent == loaded_node.index:
-                loaded_node.children[element.index] = element
-                # archive childs when load archived
-                if loaded_node.archive:
-                    self.__archive(element)
-                self.elements.remove(element)
-
     def find(self, node_index: Index, include_archived=False) -> t.Optional[CacheNode]:
+        """
+        Search node in elements.
+
+        :param node_index: node that we search
+        :param include_archived: find can return archived
+            node (searching in archived)
+        """
         for element in self.elements:
             # exclude archive from search
             if include_archived or not element.archive:
@@ -135,6 +120,44 @@ class Cache:
                 if found_node_in_children:
                     return found_node_in_children
         return None
+
+    def __insert_node_with_rebalance(self, loaded_node: CacheNode):
+        """
+        Insert loaded node in `self.elements` and relink nodes.
+        In other words - Move child nodes under parent.
+        """
+        # try put loaded node under exists parent
+        parent_node = self.find(loaded_node.parent, include_archived=True)
+        if parent_node:
+            parent_node.children[loaded_node.index] = loaded_node
+            # inherit archive state for cases, when we put middle node:
+            # DB state: N1 -> N2 -> N3
+            # loaded: N1, N3
+            # archive N1
+            # load N2 -> we should archive N2, N3
+            if parent_node.archive:
+                self.__archive(parent_node)
+        # No links. just put in element
+        else:
+            self.elements.append(loaded_node)
+
+        # if loaded element becomes parent of some loaded
+        # element - move it under loaded
+        for element in self.elements:
+            if element.parent == loaded_node.index:
+                loaded_node.children[element.index] = element
+                # inherit archive state for cases, when we put middle node (as above)
+                if loaded_node.archive:
+                    self.__archive(element)
+                # remove duplicate
+                self.elements.remove(element)
+
+    def __archive(self, node: CacheNode):
+        node.archive = True
+        for child in node.children.values():
+            # we don't need to archive childs, that already archived
+            if not child.archive:
+                self.__archive(child)
 
     def __repr__(self):
         return f"<Cache: {self.elements=}>"

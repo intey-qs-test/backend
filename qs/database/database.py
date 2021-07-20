@@ -5,6 +5,15 @@ from qs.database.utils import new_index
 
 
 class MemoryDatabase:
+    """
+    Dummy realization for database that contains tree of nodes.
+
+    Use `self.indexes` for fast search - every exists in
+    db node also appears under `self.indexes` keys.
+    Also, this node appears as child of some `IndexItem`
+    in `self.indexes` if node linked with parent
+    """
+
     def __init__(self, root_name: str = "root"):
         root = Node(value=root_name, parent="")
         self.root_index = root.index
