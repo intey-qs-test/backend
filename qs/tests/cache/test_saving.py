@@ -47,3 +47,12 @@ def test_nested_node_in_cache(default_infra: tuple[MemoryDatabase, Cache]):
     nested_db_node = memory_db.get_node(nested_cache_node.index)
     assert nested_db_node.value == "Node22"
     assert nested_db_node.parent == cache_new_node.index
+
+
+def test_delete_apply(prefilled_infra: tuple[MemoryDatabase, Cache]):
+    (memory_db, cache), node1_idx, node11_idx, *_ = prefilled_infra
+    cache.load(node1_idx)
+    cache.delete(node1_idx)
+    cache.apply()
+    assert memory_db.get_node(node1_idx).archive == True
+    assert memory_db.get_node(node11_idx).archive == True
