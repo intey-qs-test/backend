@@ -49,7 +49,7 @@ def insert(
     request: Request,
     body: InputModel,
 ):
-    request.app.cache.insert(body.value, body.parent)
+    request.app.cache.insert(value=body.value, parent=body.index)
     return {"cache": present_cache(request.app.cache)}
 
 

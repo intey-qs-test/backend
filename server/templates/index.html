@@ -1,6 +1,6 @@
 {% macro render_node(node) %}
 <div class="node" data-index="{{node.index}}">
-  <div class="title">{{node.value}}</div>
+  <div class="title {% if node.archive %}archive{% endif %}">{{node.value}}</div>
   {% if node.children|length > 0 %}
     <div class="children">
       {% for child in node.children %}
@@ -39,6 +39,9 @@
       }
       .node {
         /* border: 1px solid red; */
+      }
+      .node .archive {
+        color: gray;
       }
       .children {
         margin-left: 1.5em;
@@ -132,26 +135,36 @@
           event.preventDefault()
           event.stopPropagation()
 
+          let node_elem = document.querySelector(`.db [data-index='${node_idx}'] > .title`)
+          // canch change archive nodes
+          if (node_elem.classList.contains('archive')) {
+            return
+          }
+
           let selected_item = document.querySelector('.db .title.selected')
           if (selected_item) {
             selected_item.classList.remove("selected")
           }
-          let node_elem = document.querySelector(`.db [data-index='${node_idx}'] > .title`)
+
           node_elem.classList.add("selected")
 
           storage.db_selected_index = node_idx
-
-
       }
+
       function cacheNodeClicked(event, node_idx) {
           event.preventDefault()
           event.stopPropagation()
+          let node_elem = document.querySelector(`.cache [data-index='${node_idx}'] > .title`)
+          // canch change archive nodes
+          if (node_elem.classList.contains('archive')) {
+            return
+          }
 
           let selected_item = document.querySelector('.cache .title.selected')
           if (selected_item) {
             selected_item.classList.remove("selected")
           }
-          let node_elem = document.querySelector(`.cache [data-index='${node_idx}'] > .title`)
+
           node_elem.classList.add("selected")
 
           document.querySelector('#alter-value').value = node_elem.textContent
@@ -176,6 +189,7 @@
         }
 
       }
+
       async function alter() {
         const new_value = document.querySelector('#alter-value').value
         const index = storage.cache_selected_index
@@ -208,6 +222,40 @@
           render_error(e)
         }
       }
+
+      async function insert() {
+        const new_value = document.querySelector('#alter-value').value
+        const index = storage.cache_selected_index
+        console.debug("start insert api")
+        try {
+          let resp = await post("/cache", {value: new_value, index})
+          let data = await resp.json()
+          if (resp.status != 200) {
+            render_error(data)
+          }
+          else {
+            window.location.reload()
+          }
+        } catch (e) {
+          render_error(e)
+        }
+      }
+
+      async function deleteNode() {
+        const index = storage.cache_selected_index
+        try {
+          let resp = await fetch(`/cache?index=${index}`, {method: "DELETE"})
+          let data = await resp.json()
+          if (resp.status != 200) {
+            render_error(data)
+          }
+          else {
+            window.location.reload()
+          }
+        } catch (e) {
+          render_error(e)
+        }
+      }
       // init
       (function(){
         // bind onclick function
@@ -219,9 +267,16 @@
           node.onclick = (e) => cacheNodeClicked(e, node.dataset["index"])
         });
 
-        document.querySelector('.controls .load').onclick = load
-        document.querySelector('.controls .alter').onclick = alter
-        document.querySelector('.controls .apply').onclick = apply
+        document.querySelector('.controls .load').onclick = load;
+        document.querySelector('.controls .alter').onclick = alter;
+        document.querySelector('.controls .apply').onclick = apply;
+        document.querySelector('.controls .insert').onclick = insert;
+        document.querySelector('.controls .delete').onclick = deleteNode;
+        [...document.querySelectorAll('.controls > button')].map(btn => {
+          if (!btn.onclick) {
+            btn.disabled = true
+          }
+        })
 
       })()
     </script>
