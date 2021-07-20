@@ -21,6 +21,10 @@ class CacheNode(Node):
 
     def find(self, index: Index) -> t.Optional["CacheNode"]:
         for child_index, child in self.children.items():
+            # skip search in deleted nodes
+            if child.archive:
+                continue
+
             if child_index == index:
                 return child
             return child.find(index)
@@ -103,7 +107,7 @@ class Cache:
         parent_node = self.find(parent)
 
         if not parent_node:
-            raise CacheError(f"insert: not loaded {parent}")
+            raise CacheError(f"insert: not loaded or unexist {parent}")
 
         # NOTE: newly craete cache node has self generated index that
         # will didn't match with db index when apply this changes
@@ -116,14 +120,13 @@ class Cache:
         return node
 
     def alter(self, node_index: Index, new_value: str):
-
         found_node = self.find(node_index)
         if found_node:
             found_node.value = new_value
             record = UpdateRecord(index=node_index, value=new_value)
             self.unsync_changes.append(record)
         else:
-            raise CacheError(f"alter: not loaded {node_index}")
+            raise CacheError(f"alter: not loaded or unexist {node_index}")
 
     def apply(self):
         for change in self.unsync_changes:
@@ -168,7 +171,9 @@ class Cache:
     def find(self, node_index: Index) -> t.Optional[CacheNode]:
         for element in self.elements:
             if element.index == node_index:
-                return element
+                # exclude archive from search
+                if not element.archive:
+                    return element
             found_node_in_children = element.find(node_index)
             if found_node_in_children:
                 return found_node_in_children
