@@ -1,8 +1,14 @@
 from dataclasses import dataclass
 from fastapi import Depends
-from qs.database import IndexItem, MemoryDatabase
+from qs.database import IndexItem, MemoryDatabase, Index
 from qs.cache import Cache, CacheNode
 import typing as t
+from pydantic import BaseModel
+
+
+class InputModel(BaseModel):
+    value: str
+    index: Index
 
 
 def make_database() -> MemoryDatabase:

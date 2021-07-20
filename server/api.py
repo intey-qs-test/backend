@@ -4,7 +4,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from qs.database import MemoryDatabase, Index
 from qs.cache import Cache, CacheError
-from server.misc import present_cache, present_db, make_database, present_error
+from server.misc import (
+    present_cache,
+    present_db,
+    make_database,
+    present_error,
+    InputModel,
+)
 
 database = make_database()
 cache = Cache(database)
@@ -41,20 +47,18 @@ def load(
 @api.post("/cache")
 def insert(
     request: Request,
-    value: str,
-    parent: Index,
+    body: InputModel,
 ):
-    request.app.cache.insert(value, parent)
+    request.app.cache.insert(body.value, body.parent)
     return {"cache": present_cache(request.app.cache)}
 
 
 @api.patch("/cache")
 def alter(
     request: Request,
-    value: str,
-    index: Index,
+    body: InputModel,
 ):
-    request.app.cache.alter(node_index=index, new_value=value)
+    request.app.cache.alter(node_index=body.index, new_value=body.value)
     return {"cache": present_cache(request.app.cache)}
 
 
@@ -64,16 +68,14 @@ def delete(request: Request, index: Index):
     return {"cache": present_cache(request.app.cache)}
 
 
-@api.post("/cache/apply", response_class=HTMLResponse)
+@api.post("/cache/apply")
 def apply(
     request: Request,
 ):
     request.app.cache.apply()
     cache_view = present_cache(request.app.cache)
     db_view = present_db(request.app.db)
-    return templates.TemplateResponse(
-        "index.html", {"request": request, "db": db_view, "cache": cache_view}
-    )
+    return {"apply": True}
 
 
 @api.exception_handler(CacheError)
