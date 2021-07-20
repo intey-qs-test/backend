@@ -52,7 +52,8 @@ class MemoryDatabase:
     def insert(
         self, value: str, parent: Index, new_node_index: Index = None
     ) -> t.Optional[Node]:
-        if self.indexes.get(parent) is None:
+        # can't insert in unexist or deleted parent
+        if self.indexes.get(parent) is None or self.indexes[parent].node.archive:
             return None
 
         # client can set node index itself. If not - we make it
@@ -68,7 +69,7 @@ class MemoryDatabase:
         return new_node
 
     def delete(self, index: Index):
-        if not self.indexes.get(index):
+        if not self.indexes.get(index) or self.indexes[index].node.archive:
             return
         self.__archive(self.indexes[index])
 
@@ -78,7 +79,7 @@ class MemoryDatabase:
             self.__archive(child)
 
     def alter(self, new_value: str, index: Index) -> bool:
-        if not self.indexes.get(index):
+        if not self.indexes.get(index) or self.indexes[index].node.archive:
             return False
 
         self.indexes[index].node.value = new_value
