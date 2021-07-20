@@ -8,15 +8,16 @@ from qs.cache.errors import CacheError
 class Cache:
     """
     loads database nodes and make tree of them.
-
-    # How tree maked
-
-    Firstly, we checks other elements, that they
-    contained in a loaded element, because each node from
-    database has only parent link, no children
-
-    In second step, we checks that the loaded element has parent in
-    already loaded elements.
+    When some changes occurs, we apply them to cache
+    and record changes in separate list of changes.
+    This list of changes (or records) simplify applying
+    changes to database: we didn't need to find difference
+    Also we get opportunity to optimize actions (collapse
+    opposite actions).
+    Cache store nodes in `self.elements` as plain list
+    unlinked nodes. When we load of create node, that has
+    some parent in elements - we put this new node under
+    parent, so by this we build tree.
     """
 
     def __init__(self, db_instance):
@@ -25,6 +26,9 @@ class Cache:
         self.unsync_changes = []
 
     def load(self, index: Index) -> CacheNode:
+        """
+        Load from database node with given index
+        """
         # already loaded
         already_exists = self.find(index, include_archived=True)
         if already_exists:
@@ -43,6 +47,9 @@ class Cache:
         return cache_node
 
     def insert(self, value: str, parent: Index) -> CacheNode:
+        """
+        Create new node and put this under parent node.
+        """
         parent_node = self.find(parent)
 
         if not parent_node:
