@@ -56,3 +56,12 @@ def test_delete_apply(prefilled_infra: tuple[MemoryDatabase, Cache]):
     cache.apply()
     assert memory_db.get_node(node1_idx).archive == True
     assert memory_db.get_node(node11_idx).archive == True
+
+
+def test_only_in_cache_become_loaded(prefilled_infra: tuple[MemoryDatabase, Cache]):
+    (memory_db, cache), node1_idx, node11_idx, *_ = prefilled_infra
+    cache.load(node1_idx)
+    node1 = cache.insert(value="new one", parent=node1_idx)
+    assert node1.only_in_cache
+    cache.apply()
+    assert not node1.only_in_cache

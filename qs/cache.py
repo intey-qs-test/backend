@@ -19,15 +19,15 @@ class CacheNode(Node):
     children: dict[Index, "CacheNode"] = field(default_factory=dict)
     only_in_cache: bool = False
 
-    def find(self, index: Index) -> t.Optional["CacheNode"]:
+    def find(self, index: Index, include_archived=False) -> t.Optional["CacheNode"]:
         for child_index, child in self.children.items():
             # skip search in deleted nodes
-            if child.archive:
+            if not include_archived and child.archive:
                 continue
 
             if child_index == index:
                 return child
-            return child.find(index)
+            return child.find(index, include_archived)
         return None
 
     @classmethod
@@ -88,8 +88,8 @@ class Cache:
 
     def load(self, index: Index) -> CacheNode:
         # already loaded
-        if self.find(index):
-            return
+        if self.find(index, include_archived=True):
+            return None
 
         node = self.db.get_node(index)
 
@@ -131,6 +131,10 @@ class Cache:
     def apply(self):
         for change in self.unsync_changes:
             change.apply(self.db)
+        for change in self.unsync_changes:
+            node = self.find(change.index, include_archived=True)
+            if node:
+                node.only_in_cache = False
 
         self.unsync_changes = []
 
@@ -158,12 +162,17 @@ class Cache:
         for element in self.elements:
             if element.parent == loaded_node.index:
                 loaded_node.children[element.index] = element
+                # archive childs when load archived
+                if loaded_node.archive:
+                    self.__archive(element)
                 self.elements.remove(element)
 
         found_parent = self.find(loaded_node.parent, include_archived=True)
         if found_parent is not None:
             # Second step. link with parent, if any
             found_parent.children[loaded_node.index] = loaded_node
+            if found_parent.archive:
+                self.__archive(loaded_node)
         else:
             # No links. just put in element
             self.elements.append(loaded_node)
@@ -174,7 +183,7 @@ class Cache:
                 # exclude archive from search
                 if include_archived or not element.archive:
                     return element
-            found_node_in_children = element.find(node_index)
+            found_node_in_children = element.find(node_index, include_archived)
             if found_node_in_children:
                 return found_node_in_children
         return None

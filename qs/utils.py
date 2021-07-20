@@ -1,3 +1,4 @@
+from qs.cache import CacheNode
 from qs.database import IndexItem
 
 

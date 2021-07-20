@@ -1,7 +1,3 @@
-from qs.cache import Cache
-from qs.database import MemoryDatabase, Node
-
-
 def test_load_root_element(default_infra):
     memory_db, cache = default_infra
 
@@ -93,3 +89,14 @@ def test_load_same_twice(prefilled_infra):
     cache.load(node1_idx)
     cache.load(node1_idx)
     assert len(cache.elements) == 1
+
+
+def test_archive_on_load__when_load_in_archived(prefilled_infra):
+    (memory_db, cache), node1_idx, node11_idx, _, node111_idx = prefilled_infra
+
+    cache.load(node111_idx)
+    cache.load(node1_idx)
+    cache.delete(node1_idx)
+    cache.load(node11_idx)
+    assert cache.find(node11_idx, include_archived=True).archive
+    assert cache.find(node111_idx, include_archived=True).archive
