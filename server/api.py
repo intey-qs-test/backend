@@ -73,9 +73,13 @@ def apply(
     request: Request,
 ):
     request.app.cache.apply()
-    cache_view = present_cache(request.app.cache)
-    db_view = present_db(request.app.db)
     return {"apply": True}
+
+
+@api.post("/cache/reset")
+def reset(request: Request):
+    request.app.db = make_database()
+    request.app.cache = Cache(request.app.db)
 
 
 @api.exception_handler(CacheError)

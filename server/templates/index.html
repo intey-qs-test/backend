@@ -244,6 +244,21 @@
         }
       }
 
+      async function reset() {
+        try {
+          let resp = await post("/cache/reset")
+          let data = await resp.json()
+          if (resp.status != 200) {
+            render_error(data)
+          }
+          else {
+            window.location.reload()
+          }
+        } catch (e) {
+          render_error(e)
+        }
+      }
+
       async function deleteNode() {
         const index = storage.cache_selected_index
         try {
@@ -273,6 +288,7 @@
         document.querySelector('.controls .load').onclick = load;
         document.querySelector('.controls .alter').onclick = alter;
         document.querySelector('.controls .apply').onclick = apply;
+        document.querySelector('.controls .reset').onclick = reset;
         document.querySelector('.controls .insert').onclick = insert;
         document.querySelector('.controls .delete').onclick = deleteNode;
         [...document.querySelectorAll('.controls > button')].map(btn => {
