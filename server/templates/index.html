@@ -1,6 +1,6 @@
 {% macro render_node(node) %}
 <div class="node" data-index="{{node.index}}">
-  <div class="title {% if node.archive %}archive{% endif %}">{{node.value}}</div>
+  <div class="title {% if node.only_in_cache %}only-in-cache{% endif %} {% if node.archive %}archive{% endif %}">{{node.value}}</div>
   {% if node.children|length > 0 %}
     <div class="children">
       {% for child in node.children %}
@@ -33,6 +33,9 @@
       }
       .hidden {
         display: none;
+      }
+      .only-in-cache {
+        color: blue;
       }
       .selected {
         background-color:wheat;
