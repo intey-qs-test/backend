@@ -12,18 +12,35 @@ def default_infra():
 
 @pytest.fixture
 def prefilled_infra(default_infra):
-    db = default_infra[0]
+    db: MemoryDatabase = default_infra[0]
+    """
+    +- node1
+       +- node2
+       +- node3
+       |  +- node4
+       |     +- node7
+       +- node5
+          +- node6
+             +- node8
+    """
 
-    #             root
-    #            /    \
-    #         node1  node2
-    #         /
-    #       node11
-    #       /
-    #   node111
-    node1 = db.insert("Node1", db.root_index)
-    node11 = db.insert("Node11", node1.index)
-    node2 = db.insert("Node2", db.root_index)
-    node111 = db.insert("Node111", node11.index)
+    node1 = db.indexes[db.root_index]
+    node2 = db.insert(value="Node2", parent=node1.index)
+    node3 = db.insert(value="Node3", parent=node1.index)
+    node4 = db.insert(value="Node4", parent=node3.index)  # type: ignore
+    node7 = db.insert(value="Node7", parent=node4.index)  # type: ignore
+    node5 = db.insert(value="Node5", parent=node1.index)
+    node6 = db.insert(value="Node6", parent=node5.index)  # type: ignore
+    node8 = db.insert(value="Node8", parent=node6.index)  # type: ignore
 
-    return default_infra, node1.index, node11.index, node2.index, node111.index
+    return (
+        default_infra,
+        node1.index,
+        node3.index,
+        node2.index,
+        node4.index,
+        node7.index,
+        node5.index,
+        node6.index,
+        node8.index,
+    )

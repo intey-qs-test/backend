@@ -20,14 +20,14 @@ class CacheNode(Node):
     only_in_cache: bool = False
 
     def find(self, index: Index, include_archived=False) -> t.Optional["CacheNode"]:
-        for child_index, child in self.children.items():
+        for _, child in self.children.items():
             # skip search in deleted nodes
-            if not include_archived and child.archive:
-                continue
-
-            if child_index == index:
-                return child
-            return child.find(index, include_archived)
+            if include_archived or not child.archive:
+                if child.index == index:
+                    return child
+                found = child.find(index, include_archived)
+                if found:
+                    return found
         return None
 
     @classmethod
@@ -159,6 +159,16 @@ class Cache:
 
         # First step - search elements that is child for
         # loaded_node and move then under this node
+        parent_node = self.find(loaded_node.parent, include_archived=True)
+        if parent_node:
+            parent_node.children[loaded_node.index] = loaded_node
+            if parent_node.archive:
+                self.__archive(parent_node)
+        # No links. just put in element
+        else:
+            self.elements.append(loaded_node)
+
+        # move childs under new parent if someone
         for element in self.elements:
             if element.parent == loaded_node.index:
                 loaded_node.children[element.index] = element
@@ -167,25 +177,17 @@ class Cache:
                     self.__archive(element)
                 self.elements.remove(element)
 
-        found_parent = self.find(loaded_node.parent, include_archived=True)
-        if found_parent is not None:
-            # Second step. link with parent, if any
-            found_parent.children[loaded_node.index] = loaded_node
-            if found_parent.archive:
-                self.__archive(loaded_node)
-        else:
-            # No links. just put in element
-            self.elements.append(loaded_node)
-
     def find(self, node_index: Index, include_archived=False) -> t.Optional[CacheNode]:
         for element in self.elements:
-            if element.index == node_index:
-                # exclude archive from search
-                if include_archived or not element.archive:
+            # exclude archive from search
+            if include_archived or not element.archive:
+
+                if element.index == node_index:
                     return element
-            found_node_in_children = element.find(node_index, include_archived)
-            if found_node_in_children:
-                return found_node_in_children
+
+                found_node_in_children = element.find(node_index, include_archived)
+                if found_node_in_children:
+                    return found_node_in_children
         return None
 
     def __repr__(self):
