@@ -15,12 +15,23 @@ def make_database() -> MemoryDatabase:
     db = MemoryDatabase(root_name="Node1")
     node1_idx = db.root_index
     # NOTE: we can use ChangeRecord for generate fixture
+    # Node1
+    # +- Node2
+    # +- Node3
+    #    +- Node4
+    #       +- Node7
+    # +- Node5
+    #    +- Node6
+    #       +- Node8
 
     _ = db.insert(value="Node2", parent=node1_idx)
     node3 = db.insert(value="Node3", parent=node1_idx)
-    _ = db.insert(value="Node4", parent=node3.index)  # type: ignore
+    node4 = db.insert(value="Node4", parent=node3.index)  # type: ignore
+    _ = db.insert(value="Node7", parent=node4.index)  # type: ignore
     node5 = db.insert(value="Node5", parent=node1_idx)
-    _ = db.insert(value="Node6", parent=node5.index)  # type: ignore
+    node6 = db.insert(value="Node6", parent=node5.index)  # type: ignore
+    _ = db.insert(value="Node8", parent=node6.index)  # type: ignore
+
     return db
 
 
